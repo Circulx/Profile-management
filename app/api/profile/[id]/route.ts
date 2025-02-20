@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
 import dbConnect from "@/lib/mongodb"
-import Profile from "@/models/Profile"
+import {BusinessDetails as Profile} from "@/models/Profile"
 import { handleApiError } from "@/middleware/error-handler"
 import mongoose from "mongoose"
 
