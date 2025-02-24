@@ -23,4 +23,3 @@ export async function saveProfileSection(section: string, data: any, profileId?:
     return { success: false, error: error.message }
   }
 }
-

@@ -11,6 +11,7 @@ import { useProfile } from "@/context/ProfileContext"
 
 const documentSchema = z.object({
   panCard: z.any().optional(),
+  aadharCard: z.any().optional(),
   gstin: z.any().optional(),
   bankLetter: z.any().optional(),
   bankStatement: z.any().optional(),
@@ -32,29 +33,34 @@ export function DocumentForm() {
     resolver: zodResolver(documentSchema),
     defaultValues: {
       panCard: undefined,
+      aadharCard: undefined,
       gstin: undefined,
-      bankLetter: undefined,
-      bankStatement: undefined,
-      corporationCertificate: undefined,
-      businessAddress: undefined,
-      pickupAddressProof: undefined,
+      
       signature: undefined,
-      balanceSheet2223: undefined,
-      balanceSheet2324: undefined,
+      
     },
   })
 
   async function onSubmit(data: DocumentFormData) {
     try {
-      // Convert File objects to base64 strings before sending
-      const formData = new FormData()
-      Object.entries(data).forEach(([key, value]) => {
-        if (value instanceof File) {
-          formData.append(key, value)
-        }
-      })
+      // Convert all File objects to base64 strings
+      const processedData: Record<string, string> = {}
 
-      await submitForm(Object.fromEntries(formData))
+      for (const [key, value] of Object.entries(data)) {
+        if (value instanceof File) {
+          const base64String = await new Promise<string>((resolve) => {
+            const reader = new FileReader()
+            reader.onloadend = () => {
+              const base64 = reader.result as string
+              resolve(base64)
+            }
+            reader.readAsDataURL(value)
+          })
+          processedData[key] = base64String
+        }
+      }
+
+      await submitForm(processedData)
     } catch (error) {
       console.error(error)
     }
@@ -85,6 +91,25 @@ export function DocumentForm() {
           />
           <FormField
             control={form.control}
+            name="aadharCard"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>
+                  Aadhar Card<span className="text-red-500">*</span>
+                </FormLabel>
+                <FormControl>
+                  <FileUpload
+                    label="Upload Aadhar Card"
+                    value={field.value}
+                    onChange={(file) => field.onChange(file)}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
             name="gstin"
             render={({ field }) => (
               <FormItem>
@@ -96,91 +121,11 @@ export function DocumentForm() {
               </FormItem>
             )}
           />
-          <FormField
-            control={form.control}
-            name="bankLetter"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Bank Letter/Cancelled Cheque</FormLabel>
-                <FormControl>
-                  <FileUpload
-                    label="Upload Bank Letter"
-                    value={field.value}
-                    onChange={(file) => field.onChange(file)}
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          <FormField
-            control={form.control}
-            name="bankStatement"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Bank Statement Copy</FormLabel>
-                <FormControl>
-                  <FileUpload
-                    label="Upload Bank Statement"
-                    value={field.value}
-                    onChange={(file) => field.onChange(file)}
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          <FormField
-            control={form.control}
-            name="corporationCertificate"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Certificate of Corporation</FormLabel>
-                <FormControl>
-                  <FileUpload
-                    label="Upload Corporation Certificate"
-                    value={field.value}
-                    onChange={(file) => field.onChange(file)}
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          <FormField
-            control={form.control}
-            name="businessAddress"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Business Address</FormLabel>
-                <FormControl>
-                  <FileUpload
-                    label="Upload Business Address"
-                    value={field.value}
-                    onChange={(file) => field.onChange(file)}
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          <FormField
-            control={form.control}
-            name="pickupAddressProof"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Pickup Address Proof</FormLabel>
-                <FormControl>
-                  <FileUpload
-                    label="Upload Pickup Address Proof"
-                    value={field.value}
-                    onChange={(file) => field.onChange(file)}
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+          
+          
+          
+          
+          
           <FormField
             control={form.control}
             name="signature"
@@ -194,40 +139,8 @@ export function DocumentForm() {
               </FormItem>
             )}
           />
-          <FormField
-            control={form.control}
-            name="balanceSheet2223"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>FY 2022-23 Balance sheet</FormLabel>
-                <FormControl>
-                  <FileUpload
-                    label="Upload Balance Sheet 22-23"
-                    value={field.value}
-                    onChange={(file) => field.onChange(file)}
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          <FormField
-            control={form.control}
-            name="balanceSheet2324"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>FY 2023-24 Balance sheet</FormLabel>
-                <FormControl>
-                  <FileUpload
-                    label="Upload Balance Sheet 23-24"
-                    value={field.value}
-                    onChange={(file) => field.onChange(file)}
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+          
+          
         </div>
 
         <div className="flex gap-4">

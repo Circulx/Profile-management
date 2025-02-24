@@ -3,11 +3,11 @@
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm } from "react-hook-form"
 import * as z from "zod"
-
 import { Button } from "@/components/ui/button"
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
-import type { AddressDetails } from "../types/profile"
+import { useFormSubmit } from "@/hooks/useFormSubmit"
+import { useProfile } from "@/context/ProfileContext"
 
 const addressSchema = z.object({
   billingAddress: z.object({
@@ -28,8 +28,13 @@ const addressSchema = z.object({
   }),
 })
 
+type AddressFormData = z.infer<typeof addressSchema>
+
 export function AddressForm() {
-  const form = useForm<AddressDetails>({
+  const { isSubmitting, submitForm } = useFormSubmit("addresses")
+  const { setActiveTab } = useProfile()
+
+  const form = useForm<AddressFormData>({
     resolver: zodResolver(addressSchema),
     defaultValues: {
       billingAddress: {
@@ -51,8 +56,16 @@ export function AddressForm() {
     },
   })
 
-  function onSubmit(data: AddressDetails) {
-    console.log(data)
+  async function onSubmit(data: AddressFormData) {
+    try {
+      await submitForm(data)
+    } catch (error) {
+      console.error(error)
+    }
+  }
+
+  const handleBack = () => {
+    setActiveTab("category")
   }
 
   const AddressFields = ({ prefix }: { prefix: "billingAddress" | "pickupAddress" }) => (
@@ -66,7 +79,7 @@ export function AddressForm() {
               Country<span className="text-red-500">*</span>
             </FormLabel>
             <FormControl>
-              <Input placeholder="e.g., ABC Industries Pvt Ltd" {...field} />
+              <Input placeholder="e.g., India" {...field} />
             </FormControl>
             <FormMessage />
           </FormItem>
@@ -81,7 +94,7 @@ export function AddressForm() {
               State<span className="text-red-500">*</span>
             </FormLabel>
             <FormControl>
-              <Input placeholder="e.g., ABC Industries Pvt Ltd" {...field} />
+              <Input placeholder="e.g., Maharashtra" {...field} />
             </FormControl>
             <FormMessage />
           </FormItem>
@@ -96,7 +109,7 @@ export function AddressForm() {
               City<span className="text-red-500">*</span>
             </FormLabel>
             <FormControl>
-              <Input placeholder="e.g., ABC Industries Pvt Ltd" {...field} />
+              <Input placeholder="e.g., Mumbai" {...field} />
             </FormControl>
             <FormMessage />
           </FormItem>
@@ -111,7 +124,7 @@ export function AddressForm() {
               Address Line 1<span className="text-red-500">*</span>
             </FormLabel>
             <FormControl>
-              <Input placeholder="e.g., ABC Industries Pvt Ltd" {...field} />
+              <Input placeholder="e.g., Street address" {...field} />
             </FormControl>
             <FormMessage />
           </FormItem>
@@ -124,7 +137,7 @@ export function AddressForm() {
           <FormItem>
             <FormLabel>Address Line 2</FormLabel>
             <FormControl>
-              <Input placeholder="e.g., ABC Industries Pvt Ltd" {...field} />
+              <Input placeholder="e.g., Apartment, suite, etc." {...field} />
             </FormControl>
             <FormMessage />
           </FormItem>
@@ -139,7 +152,7 @@ export function AddressForm() {
               Phone Number<span className="text-red-500">*</span>
             </FormLabel>
             <FormControl>
-              <Input placeholder="e.g., ABC Industries Pvt Ltd" {...field} />
+              <Input placeholder="e.g., 9876543210" {...field} />
             </FormControl>
             <FormMessage />
           </FormItem>
@@ -153,20 +166,22 @@ export function AddressForm() {
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
         <div className="grid gap-6 md:grid-cols-2">
           <div>
-            <h3 className="text-lg font-medium mb-4">Add Billing Address</h3>
+            <h3 className="text-lg font-medium mb-4">Billing Address</h3>
             <AddressFields prefix="billingAddress" />
           </div>
           <div>
-            <h3 className="text-lg font-medium mb-4">Add Pickup Address</h3>
+            <h3 className="text-lg font-medium mb-4">Pickup Address</h3>
             <AddressFields prefix="pickupAddress" />
           </div>
         </div>
 
         <div className="flex gap-4">
-          <Button variant="outline" type="button">
+          <Button type="button" variant="outline" onClick={handleBack}>
             Back
           </Button>
-          <Button type="submit">Save Changes</Button>
+          <Button type="submit" className="bg-orange-600 hover:bg-orange-700 text-white" disabled={isSubmitting}>
+            {isSubmitting ? "Saving..." : "Save Changes"}
+          </Button>
         </div>
       </form>
     </Form>

@@ -1,9 +1,8 @@
 import { NextResponse } from "next/server"
 import dbConnect from "@/lib/mongodb"
 import { ContactDetails, CategoryBrand, Address, BankDetails, DocumentDetails, BusinessDetails } from "@/models/Profile"
-import { handleApiError } from "@/middleware/error-handler"
 
-const models = {
+const models: any = {
   contact: ContactDetails,
   category: CategoryBrand,
   addresses: Address,
@@ -16,46 +15,60 @@ export async function POST(req: Request, { params }: { params: { businessId: str
     await dbConnect()
 
     // Verify business exists
-    const business = await BusinessDetails.findOne({ businessId: params.businessId })
+    const business = await BusinessDetails.findOne({
+      businessId: params.businessId,
+    })
+
     if (!business) {
       return NextResponse.json({ error: "Business not found" }, { status: 404 })
     }
 
-    const body = await req.json()
+    let body
+    const contentType = req.headers.get("content-type") || ""
 
-    const Model = models[params.section as keyof typeof models]
+    if (contentType.includes("multipart/form-data")) {
+      const formData = await req.formData()
+      body = Object.fromEntries(formData)
+    } else {
+      body = await req.json()
+    }
+
+    const Model = models[params.section]
+
     if (!Model) {
       return NextResponse.json({ error: "Invalid section" }, { status: 400 })
     }
 
-    // Check if entry already exists
-    const existing = await Model.findOne({ businessId: params.businessId })
-    let data
-
-    if (existing) {
-      // Update existing entry
-      data = await Model.findOneAndUpdate(
-        { businessId: params.businessId },
-        { ...body },
-        { new: true, runValidators: true },
-      )
-    } else {
-      // Create new entry
-      data = await Model.create({
+    // Create or update the document
+    const data = await Model.findOneAndUpdate(
+      { businessId: params.businessId },
+      {
         ...body,
         businessId: params.businessId,
-      })
-    }
+        updatedAt: new Date(),
+      },
+      {
+        new: true,
+        upsert: true,
+        runValidators: true,
+        setDefaultsOnInsert: true,
+      },
+    )
 
+    return NextResponse.json({
+      success: true,
+      message: `${params.section} details saved successfully`,
+      data,
+    })
+  } catch (error: any) {
+    console.error("API Error:", error)
     return NextResponse.json(
       {
-        message: `${params.section} details saved successfully`,
-        data,
+        success: false,
+        error: error.message || "Something went wrong",
       },
-      { status: 201 },
+      { status: 500 },
     )
-  } catch (error: any) {
-    return handleApiError(error)
   }
 }
 

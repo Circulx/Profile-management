@@ -3,18 +3,13 @@
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm } from "react-hook-form"
 import * as z from "zod"
-import { Upload } from "lucide-react"
-import { useState, useEffect } from "react"
-import * as pdfjsLib from "pdfjs-dist"
-
 import { Button } from "@/components/ui/button"
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import type { BankDetails } from "../types/profile"
-import { ACCOUNT_TYPES } from "../types/profile"
-
-const MAX_FILE_SIZE = 25 * 1024 * 1024 // 25MB
+import { useFormSubmit } from "@/hooks/useFormSubmit"
+import { useProfile } from "@/context/ProfileContext"
+import { FileUpload } from "./file-upload"
 
 const bankSchema = z.object({
   accountHolderName: z.string().min(2, "Account holder name is required"),
@@ -24,17 +19,18 @@ const bankSchema = z.object({
   branch: z.string().min(2, "Branch name is required"),
   city: z.string().min(2, "City is required"),
   accountType: z.string().min(1, "Account type is required"),
-  bankLetter: z
-    .instanceof(File)
-    .refine((file) => file.size <= MAX_FILE_SIZE, "File size must be less than 25MB")
-    .optional(),
+  bankLetter: z.any().optional(),
 })
 
-export function BankForm() {
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null)
-  const [fileType, setFileType] = useState<"image" | "pdf" | null>(null)
+type BankFormData = z.infer<typeof bankSchema>
 
-  const form = useForm<BankDetails>({
+const accountTypes = ["Escrow Account", "Current Account", "Saving Account", "Joint Account", "Cash Credit/Overdraft"]
+
+export function BankForm() {
+  const { isSubmitting, submitForm } = useFormSubmit("bank")
+  const { setActiveTab } = useProfile()
+
+  const form = useForm<BankFormData>({
     resolver: zodResolver(bankSchema),
     defaultValues: {
       accountHolderName: "",
@@ -44,222 +40,181 @@ export function BankForm() {
       branch: "",
       city: "",
       accountType: "",
+      bankLetter: undefined,
     },
   })
 
-  function onSubmit(data: BankDetails) {
-    console.log(data)
+  async function onSubmit(data: BankFormData) {
+    try {
+      // Convert File object to base64 string if it exists
+      const formData = { ...data }
+      if (data.bankLetter instanceof File) {
+        const base64String = await new Promise((resolve) => {
+          const reader = new FileReader()
+          reader.onloadend = () => {
+            const base64 = reader.result as string
+            resolve(base64)
+          }
+          reader.readAsDataURL(data.bankLetter)
+        })
+        formData.bankLetter = base64String
+      }
+
+      await submitForm(formData)
+    } catch (error) {
+      console.error(error)
+    }
   }
 
-  useEffect(() => {
-    pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`
-  }, [])
-
-  const handleFileChange = async (file: File | undefined, onChange: (file: File) => void) => {
-    if (file) {
-      onChange(file)
-
-      if (file.type === "application/pdf") {
-        setFileType("pdf")
-        const pdfData = await file.arrayBuffer()
-        const pdf = await pdfjsLib.getDocument({ data: pdfData }).promise
-        const page = await pdf.getPage(1)
-        const viewport = page.getViewport({ scale: 1 })
-        const canvas = document.createElement("canvas")
-        const context = canvas.getContext("2d")
-        canvas.height = viewport.height
-        canvas.width = viewport.width
-        await page.render({ canvasContext: context!, viewport: viewport }).promise
-        setPreviewUrl(canvas.toDataURL())
-      } else {
-        setFileType("image")
-        const reader = new FileReader()
-        reader.onloadend = () => {
-          setPreviewUrl(reader.result as string)
-        }
-        reader.readAsDataURL(file)
-      }
-    }
+  const handleBack = () => {
+    setActiveTab("addresses")
   }
 
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
         <div className="grid gap-6 md:grid-cols-2">
-          <div className="space-y-4">
-            <FormField
-              control={form.control}
-              name="accountHolderName"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>
-                    Account Holder Name<span className="text-red-500">*</span>
-                  </FormLabel>
+          <FormField
+            control={form.control}
+            name="accountHolderName"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>
+                  Account Holder Name<span className="text-red-500">*</span>
+                </FormLabel>
+                <FormControl>
+                  <Input placeholder="e.g., John Doe" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="accountNumber"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>
+                  Account Number<span className="text-red-500">*</span>
+                </FormLabel>
+                <FormControl>
+                  <Input placeholder="e.g., 1234567890" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="ifscCode"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>
+                  IFSC Code<span className="text-red-500">*</span>
+                </FormLabel>
+                <FormControl>
+                  <Input placeholder="e.g., ABCD0001234" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="bankName"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>
+                  Bank Name<span className="text-red-500">*</span>
+                </FormLabel>
+                <FormControl>
+                  <Input placeholder="e.g., HDFC Bank" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="branch"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>
+                  Branch<span className="text-red-500">*</span>
+                </FormLabel>
+                <FormControl>
+                  <Input placeholder="e.g., Main Branch" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="city"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>
+                  City<span className="text-red-500">*</span>
+                </FormLabel>
+                <FormControl>
+                  <Input placeholder="e.g., Mumbai" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="accountType"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>
+                  Account Type<span className="text-red-500">*</span>
+                </FormLabel>
+                <Select onValueChange={field.onChange} defaultValue={field.value}>
                   <FormControl>
-                    <Input placeholder="e.g., ABC Industries Pvt Ltd" {...field} />
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select account type" />
+                    </SelectTrigger>
                   </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="ifscCode"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>
-                    IFSC Code/Swift Code<span className="text-red-500">*</span>
-                  </FormLabel>
-                  <FormControl>
-                    <Input placeholder="e.g., ABCD0001234" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="branch"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>
-                    Branch<span className="text-red-500">*</span>
-                  </FormLabel>
-                  <FormControl>
-                    <Input placeholder="e.g., HDFC Bank" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="bankLetter"
-              render={({ field: { value, onChange, ...field } }) => (
-                <FormItem>
-                  <FormLabel>
-                    Bank Letter/Cancelled Cheque<span className="text-red-500">*</span>
-                  </FormLabel>
-                  <FormControl>
-                    <div className="border-2 border-dashed rounded-lg p-6 text-center cursor-pointer hover:border-primary">
-                      <input
-                        type="file"
-                        accept=".pdf,.jpg,.jpeg,.png"
-                        className="hidden"
-                        id="bankLetter"
-                        onChange={(e) => {
-                          handleFileChange(e.target.files?.[0], onChange)
-                        }}
-                        {...field}
-                      />
-                      <label htmlFor="bankLetter" className="cursor-pointer">
-                        {previewUrl ? (
-                          <div className="relative w-full aspect-video">
-                            <img
-                              src={previewUrl || "/placeholder.svg"}
-                              alt="Preview"
-                              className="w-full h-full object-contain"
-                            />
-                            <p className="text-xs text-muted-foreground mt-2">
-                              {fileType === "pdf" ? "PDF Preview (First Page)" : "Image Preview"} - Click to change file
-                            </p>
-                          </div>
-                        ) : (
-                          <>
-                            <Upload className="w-8 h-8 mx-auto mb-2 text-orange-600" />
-                            <p className="text-sm text-muted-foreground">Click to Upload or drag and drop</p>
-                            <p className="text-xs text-muted-foreground mt-1">(Max file size 25 MB)</p>
-                          </>
-                        )}
-                      </label>
-                    </div>
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </div>
-          <div className="space-y-4">
-            <FormField
-              control={form.control}
-              name="accountNumber"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>
-                    Account Number<span className="text-red-500">*</span>
-                  </FormLabel>
-                  <FormControl>
-                    <Input placeholder="e.g., 1234 5678 9012" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="bankName"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>
-                    Bank Name<span className="text-red-500">*</span>
-                  </FormLabel>
-                  <FormControl>
-                    <Input placeholder="e.g., HDFC Bank" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="city"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>
-                    City<span className="text-red-500">*</span>
-                  </FormLabel>
-                  <FormControl>
-                    <Input placeholder="e.g., Mumbai" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="accountType"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>
-                    Account Type<span className="text-red-500">*</span>
-                  </FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select Option" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {ACCOUNT_TYPES.map((type) => (
-                        <SelectItem key={type} value={type.toLowerCase()}>
-                          {type}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </div>
+                  <SelectContent>
+                    {accountTypes.map((type) => (
+                      <SelectItem key={type} value={type.toLowerCase()}>
+                        {type}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="bankLetter"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Bank Letter/Cancelled Cheque</FormLabel>
+                <FormControl>
+                  <FileUpload
+                    label="Upload Bank Letter"
+                    value={field.value}
+                    onChange={(file) => field.onChange(file)}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
         </div>
 
         <div className="flex gap-4">
-          <Button variant="outline" type="button">
+          <Button type="button" variant="outline" onClick={handleBack}>
             Back
           </Button>
-          <Button type="submit" className="bg-orange-600 hover:bg-orange-700 text-white">
-            Save Changes
+          <Button type="submit" className="bg-orange-600 hover:bg-orange-700 text-white" disabled={isSubmitting}>
+            {isSubmitting ? "Saving..." : "Save Changes"}
           </Button>
         </div>
       </form>

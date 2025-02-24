@@ -80,15 +80,11 @@ export const ACCOUNT_TYPES = [
 
 export interface DocumentDetails {
   panCard?: File
+  aadharCard?: File // Add this line
   gstin?: File
-  bankLetter?: File
-  bankStatement?: File
-  corporationCertificate?: File
-  businessAddress?: File
-  pickupAddressProof?: File
+  
   signature?: File
-  balanceSheet2223?: File
-  balanceSheet2324?: File
+  
 }
 
 // Update TabType to be more specific for navigation

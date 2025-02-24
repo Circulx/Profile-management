@@ -149,15 +149,11 @@ const documentDetailsSchema = new mongoose.Schema(
       ref: "BusinessDetails",
     },
     panCard: String,
+    aadharCard: String, // Add this line
     gstin: String,
-    bankLetter: String,
-    bankStatement: String,
-    corporationCertificate: String,
-    businessAddress: String,
-    pickupAddressProof: String,
+    
     signature: String,
-    balanceSheet2223: String,
-    balanceSheet2324: String,
+   
   },
   {
     timestamps: true,

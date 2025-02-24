@@ -8,7 +8,7 @@ import type { TabType } from "@/types/profile"
 export function useFormSubmit(currentTab: TabType) {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const { toast } = useToast()
-  const { businessId, setActiveTab, markFormAsCompleted, setBusinessId } = useProfile()
+  const { businessId, setBusinessId, setActiveTab, markFormAsCompleted } = useProfile()
 
   const submitForm = async (data: any) => {
     if (!businessId && currentTab !== "business") {
@@ -26,11 +26,11 @@ export function useFormSubmit(currentTab: TabType) {
 
       const url = currentTab === "business" ? "/api/profile/business" : `/api/profile/${businessId}/${currentTab}`
 
-      console.log("Submitting to:", url)
-
       const response = await fetch(url, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+        },
         body: JSON.stringify(data),
       })
 
@@ -40,7 +40,6 @@ export function useFormSubmit(currentTab: TabType) {
         throw new Error(result.error || "Failed to save data")
       }
 
-      // For business form, set the businessId
       if (currentTab === "business" && result.data?.businessId) {
         setBusinessId(result.data.businessId)
       }
