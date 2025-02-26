@@ -8,6 +8,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { FileUpload } from "./file-upload"
 import { useFormSubmit } from "@/hooks/useFormSubmit"
 import { useProfile } from "@/context/ProfileContext"
+import { useRouter } from "next/navigation"
 
 const documentSchema = z.object({
   panCard: z.any().optional(),
@@ -28,6 +29,7 @@ type DocumentFormData = z.infer<typeof documentSchema>
 export function DocumentForm() {
   const { isSubmitting, submitForm } = useFormSubmit("documents")
   const { setActiveTab } = useProfile()
+  const router = useRouter()
 
   const form = useForm<DocumentFormData>({
     resolver: zodResolver(documentSchema),
@@ -35,15 +37,19 @@ export function DocumentForm() {
       panCard: undefined,
       aadharCard: undefined,
       gstin: undefined,
-      
+      bankLetter: undefined,
+      bankStatement: undefined,
+      corporationCertificate: undefined,
+      businessAddress: undefined,
+      pickupAddressProof: undefined,
       signature: undefined,
-      
+      balanceSheet2223: undefined,
+      balanceSheet2324: undefined,
     },
   })
 
   async function onSubmit(data: DocumentFormData) {
     try {
-      // Convert all File objects to base64 strings
       const processedData: Record<string, string> = {}
 
       for (const [key, value] of Object.entries(data)) {
@@ -60,7 +66,14 @@ export function DocumentForm() {
         }
       }
 
-      await submitForm(processedData)
+      const result = await submitForm(processedData)
+
+      if (result?.success) {
+        // Wait for a short delay to ensure state updates are complete
+        setTimeout(() => {
+          router.push("/success")
+        }, 100)
+      }
     } catch (error) {
       console.error(error)
     }
@@ -122,10 +135,6 @@ export function DocumentForm() {
             )}
           />
           
-          
-          
-          
-          
           <FormField
             control={form.control}
             name="signature"
@@ -140,7 +149,7 @@ export function DocumentForm() {
             )}
           />
           
-          
+            
         </div>
 
         <div className="flex gap-4">

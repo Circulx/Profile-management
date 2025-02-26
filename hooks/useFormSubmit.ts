@@ -8,7 +8,7 @@ import type { TabType } from "@/types/profile"
 export function useFormSubmit(currentTab: TabType) {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const { toast } = useToast()
-  const { businessId, setBusinessId, setActiveTab, markFormAsCompleted } = useProfile()
+  const { businessId, setBusinessId, setActiveTab, markFormAsCompleted, setSubmissionComplete } = useProfile()
 
   const submitForm = async (data: any) => {
     if (!businessId && currentTab !== "business") {
@@ -46,19 +46,21 @@ export function useFormSubmit(currentTab: TabType) {
 
       markFormAsCompleted(currentTab)
 
-      // Determine next tab
-      const tabs: TabType[] = ["business", "contact", "category", "addresses", "bank", "documents"]
-      const currentIndex = tabs.indexOf(currentTab)
-      const nextTab = tabs[currentIndex + 1] || currentTab
-
-      setActiveTab(nextTab)
+      if (currentTab === "documents") {
+        setSubmissionComplete(true)
+      } else {
+        const tabs: TabType[] = ["business", "contact", "category", "addresses", "bank", "documents"]
+        const currentIndex = tabs.indexOf(currentTab)
+        const nextTab = tabs[currentIndex + 1] || currentTab
+        setActiveTab(nextTab)
+      }
 
       toast({
         title: "Success",
         description: `${currentTab} details saved successfully`,
       })
 
-      return result
+      return { success: true, data: result.data }
     } catch (error: any) {
       console.error("Form submission error:", error)
       toast({
@@ -66,7 +68,7 @@ export function useFormSubmit(currentTab: TabType) {
         description: error.message || "Something went wrong",
         variant: "destructive",
       })
-      throw error
+      return { success: false, error: error.message }
     } finally {
       setIsSubmitting(false)
     }

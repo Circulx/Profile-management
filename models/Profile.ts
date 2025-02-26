@@ -10,6 +10,11 @@ const businessDetailsSchema = new mongoose.Schema(
       // Generate a unique business ID with prefix BUS
       default: () => `BUS${Date.now().toString(36).toUpperCase()}`,
     },
+    status: {
+      type: String,
+      enum: ["draft", "under_review", "approved", "rejected"],
+      default: "draft",
+    },
     legalEntityName: { type: String, required: true },
     tradeName: { type: String, required: true },
     gstin: { type: String, required: true },
@@ -151,9 +156,14 @@ const documentDetailsSchema = new mongoose.Schema(
     panCard: String,
     aadharCard: String, // Add this line
     gstin: String,
-    
+    bankLetter: String,
+    bankStatement: String,
+    corporationCertificate: String,
+    businessAddress: String,
+    pickupAddressProof: String,
     signature: String,
-   
+    balanceSheet2223: String,
+    balanceSheet2324: String,
   },
   {
     timestamps: true,

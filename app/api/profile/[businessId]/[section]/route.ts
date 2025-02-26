@@ -55,6 +55,15 @@ export async function POST(req: Request, { params }: { params: { businessId: str
       },
     )
 
+    // If this is the documents section (final step), update business status
+    if (params.section === "documents") {
+      await BusinessDetails.findOneAndUpdate(
+        { businessId: params.businessId },
+        { status: "under_review" },
+        { new: true },
+      )
+    }
+
     return NextResponse.json({
       success: true,
       message: `${params.section} details saved successfully`,
